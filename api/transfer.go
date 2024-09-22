@@ -40,13 +40,18 @@ func (server *Server) createTransfer(ctx *gin.Context) {
     if !valid{
 		return
 	}
+    
+	if fromAccount.Balance <= 0 || fromAccount.Balance < req.Amount {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "not enough money"})
+		return
+	}
 
 	arg := db.TransferTxParams{
 		FromAccountID: req.FromAccountID,
 		ToAccountID:   req.ToAccountID,
 		Amount:        req.Amount,
 	}
-
+    
 	result, err := server.store.TransferTx(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -73,5 +78,6 @@ func (server *Server) goodAccountCurrency(ctx *gin.Context, accountID int64, cur
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return account, false
 	}
+	
 	return account, true
 }

@@ -68,7 +68,7 @@ func (server *Server) getAccount(ctx *gin.Context) {
 	}
 	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
 	if account.Owner != authPayload.Username{
-		err = errors.New("wrong user to create")
+		err = errors.New("wrong user to get")
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
