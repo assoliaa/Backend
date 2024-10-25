@@ -3,6 +3,7 @@ package api
 import (
 	db "Backend/db/sqlc"
 	"Backend/token"
+
 	//"database/sql"
 	"errors"
 
@@ -10,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
@@ -25,7 +27,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 	}
     authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
 	params := db.InsertAccountParams{
-		Owner:   authPayload.Username,
+		OwnerID:   authPayload.UserId,
 		Balance:  0,
 		Currency: req.Currency,
 	}
@@ -47,7 +49,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 }
 
 type getAccountReq struct{
-	ID int64 `uri:"id" binding:"required,min=1"`
+	ID string `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) getAccount(ctx *gin.Context) {
@@ -56,8 +58,12 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-
-	account, err := server.store.GetAccount(ctx, req.ID)
+	accountID, err := uuid.Parse(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+    return
+    }
+	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -67,7 +73,7 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
-	if account.Owner != authPayload.Username{
+	if account.OwnerID != authPayload.UserId{
 		err = errors.New("wrong user to get")
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
@@ -88,7 +94,7 @@ func(server *Server)listAccounts(ctx *gin.Context){
 	}
 	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
 	params:= db.GetAccountsParams{
-		Owner: authPayload.Username,
+		OwnerID: authPayload.UserId,
 		Limit:req.PageSize,
 		Offset:(req.PageId-1)*req.PageSize,
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,10 +18,10 @@ func addAuthorization(
 	request *http.Request, 
 	tokenMaker token.Maker,
 	autorizationType string,
-	username string,
+	id uuid.UUID,
 	duration time.Duration,
 ){
-	token, err := tokenMaker.CreateToken(username, duration)
+	token, err := tokenMaker.CreateToken(id, duration)
 	assert.NoError(t, err)
 
 	authorizationHeader := fmt.Sprintf("%s %s", autorizationType, token)
@@ -30,6 +31,7 @@ func addAuthorization(
 
 
 func TestAuthMiddleware(t *testing.T){
+	userId := uuid.New()
 	testCases :=[]struct{
 		name string
 		setAuth func(t *testing.T, request *http.Request, tokenMaker token.Maker)
@@ -38,7 +40,7 @@ func TestAuthMiddleware(t *testing.T){
 		{
 		name: "OK",
 		setAuth: func(t *testing.T, request *http.Request, tokenMaker  token.Maker){
-			addAuthorization(t, request, tokenMaker, authBearer, "user",  time.Minute)
+			addAuthorization(t, request, tokenMaker, authBearer, userId,  time.Minute)
 		},
 		checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
 			assert.Equal(t, http.StatusOK, recorder.Code)
@@ -55,7 +57,7 @@ func TestAuthMiddleware(t *testing.T){
 		{
 			name: "UnsupportedType",
 			setAuth: func(t *testing.T, request *http.Request, tokenMaker  token.Maker){
-				addAuthorization(t, request, tokenMaker, "unsupported", "user",  time.Minute)
+				addAuthorization(t, request, tokenMaker, "unsupported", uuid.Nil,  time.Minute)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
 				assert.Equal(t, http.StatusUnauthorized, recorder.Code)
@@ -64,7 +66,7 @@ func TestAuthMiddleware(t *testing.T){
 		{
 			name: "InvalidAuthFormat",
 			setAuth: func(t *testing.T, request *http.Request, tokenMaker  token.Maker){
-				addAuthorization(t, request, tokenMaker, "", "user",  time.Minute)
+				addAuthorization(t, request, tokenMaker, "", uuid.New(),  time.Minute)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
 				assert.Equal(t, http.StatusUnauthorized, recorder.Code)
@@ -73,7 +75,7 @@ func TestAuthMiddleware(t *testing.T){
 		{
 			name: "ExpiredToken",
 			setAuth: func(t *testing.T, request *http.Request, tokenMaker  token.Maker){
-				addAuthorization(t, request, tokenMaker, authBearer, "user",  -time.Minute)
+				addAuthorization(t, request, tokenMaker, authBearer, userId,  -time.Minute)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder){
 				assert.Equal(t, http.StatusUnauthorized, recorder.Code)

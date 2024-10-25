@@ -8,21 +8,22 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	//"github.com/lib/pq"
+	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 )
 
 type createUserRequest struct {
-	Username    string `json:"username" binding:"required,alphanum"`
-	Password string `json:"password" binding:"required,min=6"`
-	FullName    string `json:"full_name" binding:"required,alphanum"`
-    Email    string `json:"email" binding:"required,email"`
+	Username		string `json:"username" binding:"required,alphanum"`
+	Password		string `json:"password" binding:"required,min=6"`
+	FullName		string `json:"full_name" binding:"required,alphanum"`
+    Email			string `json:"email" binding:"required,email"`
 }
 type userResponse struct {
-	Username    string `json:"username" binding:"required,alphanum"`
-	FullName    string `json:"full_name" binding:"required,alphanum"`
-    Email    string `json:"email" binding:"required,email"`
-    PasswordChangedAt time.Time `json:"password_changed_at"`
-	CreatedAt time.Time `json:"created_at"`
+	Username			string `json:"username" binding:"required,alphanum"`
+	FullName    		string `json:"full_name" binding:"required,alphanum"`
+    Email				string `json:"email" binding:"required,email"`
+    PasswordChangedAt 	time.Time `json:"password_changed_at"`
+	CreatedAt 			time.Time `json:"created_at"`
 }
 
 func newUserResponse(user db.User) userResponse {
@@ -48,7 +49,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 	}
 
 	params := db.InsertUserParams{
-		Username:    req.Username,
+		Username:      req.Username,
 		HashPassword:  hashedPassword,
 		FullName: req.FullName,
 		Email: req.Email,
@@ -68,8 +69,8 @@ func (server *Server) createUser(ctx *gin.Context) {
 }
 
 type loginUserRequest struct {
-	Username    string `json:"username" binding:"required,alphanum"`
-	Password string `json:"password" binding:"required,min=6"`
+	UserId		uuid.UUID `json:"username" binding:"required,alphanum"`
+	Password	string `json:"password" binding:"required,min=6"`
 }
 
 type loginUserResponse struct {
@@ -84,7 +85,7 @@ func (server *Server)loginUser(ctx *gin.Context){
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	user, err := server.store.GetUser(ctx, req.Username)
+	user, err := server.store.GetUser(ctx, req.UserId)
 	if err!=nil{
 		if err == sql.ErrNoRows{
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -99,7 +100,7 @@ func (server *Server)loginUser(ctx *gin.Context){
 			return
 	}
 	accessToken, err := server. tokenMaker.CreateToken(
-		user.Username,
+		user.ID,
 		server.config.AccessTokenDuration,
 	)
 	if err !=nil{

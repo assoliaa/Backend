@@ -18,7 +18,7 @@ func (server *Server) setupRouter() {
 	server.router = router
 }
 
-func(server *Server)Start(address string)error{ // а это наоборот вернуть?
+func(server *Server)Start(address string)error{ 
 	return server.router.Run(address)
 }
 

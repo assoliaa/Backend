@@ -9,11 +9,12 @@ import (
 	"Backend/token"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type transferRequest struct {
-	FromAccountID int64  `json:"from_account_id" binding:"required,min=1"`
-	ToAccountID   int64  `json:"to_account_id" binding:"required,min=1"`
+	FromAccountID uuid.UUID  `json:"from_account_id" binding:"required"`
+	ToAccountID   uuid.UUID  `json:"to_account_id" binding:"required"`
 	Amount        int64  `json:"amount" binding:"required,min=1"`
 	Currency      string `json:"currency" binding:"required,currency"`
 }
@@ -30,7 +31,7 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		return
 	}
 	authPayload :=ctx.MustGet(authPayloadKey).(*token.Payload)
-	if fromAccount.Owner != authPayload.Username {
+	if fromAccount.OwnerID != authPayload.UserId {
 		err := errors.New("its a wrong user")
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
@@ -61,7 +62,7 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func (server *Server) goodAccountCurrency(ctx *gin.Context, accountID int64, currency string) (db.Account, bool) {
+func (server *Server) goodAccountCurrency(ctx *gin.Context, accountID uuid.UUID, currency string) (db.Account, bool) {
 	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if errors.Is(err, db.ErrRecordNotFound) {
